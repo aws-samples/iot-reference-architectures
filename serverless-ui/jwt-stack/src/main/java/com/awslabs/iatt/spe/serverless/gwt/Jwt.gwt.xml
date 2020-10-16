@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module rename-to="app">
+    <inherits name="com.google.gwt.user.User"/>
+    <inherits name="org.dominokit.domino.ui.DominoUI"/>
+    <inherits name="org.dominokit.domino.api.Domino"/>
+    <inherits name="org.dominokit.domino.rest.GwtRest"/>
+    <!--    <inherits name="org.dominokit.domino.logger.Logging"/>-->
+    <!--    <inherits name="com.google.gwt.json.JSON"/>-->
+    <!--    <inherits name="org.dominokit.jacksonapt.GwtJacksonApt"/>-->
+    <source path="client"/>
+    <source path="shared"/>
+    <entry-point class="com.awslabs.iatt.spe.serverless.gwt.client.JwtEntryPoint"/>
+</module>

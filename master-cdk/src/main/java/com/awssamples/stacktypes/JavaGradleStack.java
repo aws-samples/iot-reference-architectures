@@ -1,7 +1,6 @@
 package com.awssamples.stacktypes;
 
-import com.aws.samples.lambda.servlet.automation.GeneratedClassFinder;
-import com.aws.samples.lambda.servlet.automation.GeneratedClassInfo;
+import com.aws.samples.cdk.helpers.CdkHelper;
 import com.awssamples.gradle.GradleSupport;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
@@ -13,7 +12,7 @@ import java.io.File;
 import java.util.List;
 import java.util.jar.JarFile;
 
-import static com.awssamples.shared.CdkHelper.NO_SEPARATOR;
+import static com.aws.samples.cdk.helpers.CdkHelper.NO_SEPARATOR;
 import static java.util.Collections.singletonList;
 
 public interface JavaGradleStack {
@@ -33,10 +32,11 @@ public interface JavaGradleStack {
         return LoggerFactory.getLogger(JavaGradleStack.class.getName());
     }
 
-    default void build() {
+    default String build() {
         getLogger().info("Building artifacts...");
         getProjectDirectoryFiles().forEach(GradleSupport::buildJar);
         getLogger().info("Artifacts built");
+        return CdkHelper.getJarFileHash(getOutputArtifactFile());
     }
 
     default String getOutputArtifactRelativePath() {
@@ -53,10 +53,5 @@ public interface JavaGradleStack {
 
     default JarFile getArtifactFile() {
         return Try.of(() -> new JarFile(new File(getOutputArtifactRelativePath()))).get();
-    }
-
-    default List<GeneratedClassInfo> getGeneratedClassInfo() {
-        GeneratedClassFinder generatedClassFinder = new GeneratedClassFinder();
-        return generatedClassFinder.getGeneratedClassList(getArtifactFile());
     }
 }

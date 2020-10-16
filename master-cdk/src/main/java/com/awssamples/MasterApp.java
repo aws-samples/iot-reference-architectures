@@ -1,8 +1,8 @@
 package com.awssamples;
 
+import com.aws.samples.cdk.helpers.CdkHelper;
 import com.awslabs.general.helpers.data.ProcessOutput;
 import com.awslabs.general.helpers.interfaces.ProcessHelper;
-import com.awssamples.shared.CdkHelper;
 import io.vavr.collection.List;
 import io.vavr.control.Try;
 import org.slf4j.Logger;
@@ -23,10 +23,6 @@ public class MasterApp {
     public static void main(final String argv[]) {
         if (argv.length != 2) {
             throw new RuntimeException("Two arguments are required. The first argument is the class to use for the stack. The second argument is the name to use for the stack.");
-        }
-
-        if (!isCorrectNodeJsVersion()) {
-            throw new RuntimeException("CDK requires NodeJS version must be 12.x. Change the default version of NodeJS to a 12.x version and try again. [https://github.com/aws/aws-cdk/issues/5187]");
         }
 
         String className = argv[0];
@@ -69,23 +65,6 @@ public class MasterApp {
         app.synth();
     }
 
-    private static boolean isCorrectNodeJsVersion() {
-        List<String> programAndArguments = List.of("node", "--version");
-
-        ProcessBuilder processBuilder = processHelper.getProcessBuilder(programAndArguments);
-
-        Optional<ProcessOutput> optionalProcessOutput = processHelper.getOutputFromProcess(processBuilder);
-
-        if (!optionalProcessOutput.isPresent()) {
-            return false;
-        }
-
-        List<String> stdoutStrings = optionalProcessOutput.get().getStandardOutStrings();
-
-        // We expect NodeJS 12.x only!
-        return stdoutStrings.getOrElse("").startsWith("v12.");
-    }
-
     private static void exitWithFailure() {
         System.exit(1);
     }
@@ -96,6 +75,6 @@ public class MasterApp {
 
     private static void logPossibleVersionIssue(Exception exception) {
         exception.printStackTrace();
-        log.error("Failed to create a CDK stack, this may be due to CDK being out of date. Try running 'npm i -g aws-cdk' and then re-run the stack. The complete exception information is above.");
+        log.error("Failed to create a CDK stack. Check the logs to determine the root cause.");
     }
 }

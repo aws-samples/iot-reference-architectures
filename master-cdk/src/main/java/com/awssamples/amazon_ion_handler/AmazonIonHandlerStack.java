@@ -1,16 +1,16 @@
 package com.awssamples.amazon_ion_handler;
 
+import com.aws.samples.cdk.constructs.iam.policies.LambdaPolicies;
+import com.aws.samples.cdk.helpers.IotHelper;
+import com.aws.samples.cdk.helpers.LambdaHelper;
+import com.aws.samples.cdk.helpers.RoleHelper;
+import com.aws.samples.cdk.helpers.RulesEngineSqlHelper;
 import com.awslabs.general.helpers.interfaces.LambdaPackagingHelper;
 import com.awslabs.lambda.data.FunctionName;
 import com.awslabs.lambda.data.ImmutableFunctionName;
 import com.awslabs.lambda.data.ImmutablePythonLambdaFunctionDirectory;
 import com.awslabs.lambda.data.PythonLambdaFunctionDirectory;
 import com.awssamples.MasterApp;
-import com.awssamples.iam.policies.LambdaPolicies;
-import com.awssamples.shared.IotHelper;
-import com.awssamples.shared.LambdaHelper;
-import com.awssamples.shared.RoleHelper;
-import com.awssamples.shared.RulesEngineSqlHelper;
 import software.amazon.awscdk.core.Construct;
 import software.amazon.awscdk.core.Duration;
 import software.amazon.awscdk.services.iam.Role;
@@ -23,8 +23,8 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.emptyMap;
 
 public class AmazonIonHandlerStack extends software.amazon.awscdk.core.Stack {
@@ -60,14 +60,14 @@ public class AmazonIonHandlerStack extends software.amazon.awscdk.core.Stack {
         Path dualDeploymentPackage = lambdaPackagingHelper.packagePythonFunction(functionName, pythonLambdaFunctionDirectory);
 
         // Resources to convert an Amazon Ion message to JSON
-        Role ionMessageRole = RoleHelper.buildPublishToTopicRole(this, ION_MESSAGE, ION_OUTPUT_TOPIC, EMPTY_LIST, LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
+        Role ionMessageRole = RoleHelper.buildPublishToTopicRole(this, ION_MESSAGE, ION_OUTPUT_TOPIC, Optional.empty(), Optional.empty(), LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
         Map<String, String> ionLambdaEnvironment = getIonLambdaEnvironment();
         Function ionMessageFunction = LambdaHelper.buildIotEventLambda(this, ION_MESSAGE, ionMessageRole, Runtime.PYTHON_3_7, emptyMap(), ionLambdaEnvironment, dualDeploymentPackage.toString(), ION_EVENT_HANDLER, LAMBDA_FUNCTION_TIMEOUT);
         CfnTopicRule ionMessageTopicRule = RulesEngineSqlHelper.buildSelectAllBinaryIotEventRule(this, ION_MESSAGE, ionMessageFunction, ION_INPUT_TOPIC);
         IotHelper.allowIotTopicRuleToInvokeLambdaFunction(this, ionMessageTopicRule, ionMessageFunction, ION_MESSAGE);
 
         // Resources to convert a JSON message to Amazon Ion
-        Role jsonMessageRole = RoleHelper.buildPublishToTopicRole(this, JSON_MESSAGE, JSON_OUTPUT_TOPIC, EMPTY_LIST, LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
+        Role jsonMessageRole = RoleHelper.buildPublishToTopicRole(this, JSON_MESSAGE, JSON_OUTPUT_TOPIC, Optional.empty(), Optional.empty(), LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
         Map<String, String> jsonLambdaEnvironment = getJsonLambdaEnvironment();
         Function jsonMessageFunction = LambdaHelper.buildIotEventLambda(this, JSON_MESSAGE, jsonMessageRole, Runtime.PYTHON_3_7, emptyMap(), jsonLambdaEnvironment, dualDeploymentPackage.toString(), JSON_EVENT_HANDLER, LAMBDA_FUNCTION_TIMEOUT);
         CfnTopicRule jsonMessageTopicRule = RulesEngineSqlHelper.buildSelectAllIotEventRule(this, JSON_MESSAGE, jsonMessageFunction, JSON_INPUT_TOPIC);

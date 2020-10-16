@@ -1,0 +1,59 @@
+<!doctype html>
+<head>
+    <meta charset=UTF-8>
+
+    <link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Inconsolata&display=swap" rel="stylesheet"/>
+
+    <script src="app/app.nocache.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
+
+    <script src="aws-iot-sdk-browser-bundle-min.js"></script>
+
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+
+    <link href="app/css/domino-ui.css" rel="stylesheet" type="text/css">
+    <link href="app/css/themes/all-themes.css" rel="stylesheet" type="text/css">
+
+    <title>JWT demo</title>
+
+    <script>
+        String.prototype.endsWith = function (s) {
+            return this.length >= s.length && this.substr(this.length - s.length) == s;
+        }
+
+        var originalLocationString = new String(window.location);
+        var locationString = new String(window.location);
+        var queryString = new String(window.location.search);
+        locationString = locationString.replace(queryString, '');
+
+        if (!locationString.endsWith("/")) {
+            // Redirect to the correct URL, slash is required at the end so relative links work as expected
+            // Use window.location.replace so the previous incorrect location is not stored in the browser history
+            locationString = locationString + "/"
+        }
+
+        locationString = locationString + queryString;
+
+        if (locationString != originalLocationString) {
+            window.location.replace(locationString);
+        }
+    </script>
+
+    <script>
+        var AWSIoTData = require('aws-iot-device-sdk');
+    </script>
+</head>
+
+<body>
+
+<noscript>
+    <div style="width: 22em; position: absolute; left: 50%; margin-left: -11em; color: red; background-color: white; border: 1px solid red; padding: 4px; font-family: sans-serif">
+        Your web browser must have JavaScript enabled
+        in order for this application to display correctly.
+    </div>
+</noscript>
+
+</body>
+</html>

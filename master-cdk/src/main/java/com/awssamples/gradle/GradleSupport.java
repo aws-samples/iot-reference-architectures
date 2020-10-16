@@ -8,8 +8,6 @@ import org.gradle.tooling.ProjectConnection;
 import java.io.File;
 
 public class GradleSupport {
-    public static final String HANDLE_REQUEST = "handleRequest";
-
     public static void buildJar(File projectDirectoryFile) {
         ProjectConnection projectConnection = GradleConnector.newConnector()
                 .forProjectDirectory(projectDirectoryFile)

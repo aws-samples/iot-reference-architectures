@@ -12,3 +12,9 @@ build
 target
 cdk.out
 generated
+war
+node_modules
+master-cdk-temp
+/serverless-ui/jwt-stack/src/main/resources/fixed-public.key
+/serverless-ui/jwt-stack/src/main/resources/fixed-private.key
+/serverless-ui/jwt-stack/src/main/webapp/aws-iot-sdk-browser-bundle-min.js

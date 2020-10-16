@@ -1,10 +1,10 @@
 package com.awssamples.cbor_handler;
 
-import com.awssamples.iam.policies.LambdaPolicies;
-import com.awssamples.shared.IotHelper;
-import com.awssamples.shared.LambdaHelper;
-import com.awssamples.shared.RoleHelper;
-import com.awssamples.shared.RulesEngineSqlHelper;
+import com.aws.samples.cdk.constructs.iam.policies.LambdaPolicies;
+import com.aws.samples.cdk.helpers.IotHelper;
+import com.aws.samples.cdk.helpers.LambdaHelper;
+import com.aws.samples.cdk.helpers.RoleHelper;
+import com.aws.samples.cdk.helpers.RulesEngineSqlHelper;
 import com.awssamples.stacktypes.JavaGradleStack;
 import software.amazon.awscdk.core.Construct;
 import software.amazon.awscdk.core.Duration;
@@ -15,8 +15,8 @@ import software.amazon.awscdk.services.lambda.Runtime;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
-import static java.util.Collections.EMPTY_LIST;
 import static java.util.Collections.emptyMap;
 
 public class CborHandlerStack extends software.amazon.awscdk.core.Stack implements JavaGradleStack {
@@ -46,14 +46,14 @@ public class CborHandlerStack extends software.amazon.awscdk.core.Stack implemen
         build();
 
         // Resources to convert an Amazon Ion message to JSON
-        Role cborMessageRole = RoleHelper.buildPublishToTopicRole(this, CBOR_MESSAGE, CBOR_OUTPUT_TOPIC, EMPTY_LIST, LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
+        Role cborMessageRole = RoleHelper.buildPublishToTopicRole(this, CBOR_MESSAGE, CBOR_OUTPUT_TOPIC, Optional.empty(), Optional.empty(), LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
         Map<String, String> cborLambdaEnvironment = getCborLambdaEnvironment();
         Function cborMessageFunction = LambdaHelper.buildIotEventLambda(this, CBOR_MESSAGE, cborMessageRole, Runtime.JAVA_8, emptyMap(), cborLambdaEnvironment, getAssetCode(), CBOR_EVENT_HANDLER, LAMBDA_FUNCTION_TIMEOUT);
         CfnTopicRule cborMessageTopicRule = RulesEngineSqlHelper.buildSelectAllBinaryIotEventRule(this, CBOR_MESSAGE, cborMessageFunction, CBOR_INPUT_TOPIC);
         IotHelper.allowIotTopicRuleToInvokeLambdaFunction(this, cborMessageTopicRule, cborMessageFunction, CBOR_MESSAGE);
 
         // Resources to convert a JSON message to Amazon Ion
-        Role jsonMessageRole = RoleHelper.buildPublishToTopicRole(this, JSON_MESSAGE, JSON_OUTPUT_TOPIC, EMPTY_LIST, LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
+        Role jsonMessageRole = RoleHelper.buildPublishToTopicRole(this, JSON_MESSAGE, JSON_OUTPUT_TOPIC, Optional.empty(), Optional.empty(), LambdaPolicies.LAMBDA_SERVICE_PRINCIPAL);
         Map<String, String> jsonLambdaEnvironment = getJsonLambdaEnvironment();
         Function jsonMessageFunction = LambdaHelper.buildIotEventLambda(this, JSON_MESSAGE, jsonMessageRole, Runtime.JAVA_8, emptyMap(), jsonLambdaEnvironment, getAssetCode(), JSON_EVENT_HANDLER, LAMBDA_FUNCTION_TIMEOUT);
         CfnTopicRule jsonMessageTopicRule = RulesEngineSqlHelper.buildSelectAllIotEventRule(this, JSON_MESSAGE, jsonMessageFunction, JSON_INPUT_TOPIC);

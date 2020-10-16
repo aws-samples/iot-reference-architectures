@@ -1,0 +1,3 @@
+{
+  "app": "rm -rf cdk.out && cd ../../master-cdk && ./gradlew run --args='com.awssamples.serverless_ui.ServerlessUiStack jwt-stack' 1>&2 && cd - > /dev/null && mv ../../master-cdk/cdk.out ."
+}
