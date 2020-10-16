@@ -169,8 +169,6 @@ configure<GwtPluginExtension> {
 // Task configuration
 val awsIotBrowserBundleDestination = "./src/main/webapp/aws-iot-sdk-browser-bundle-min.js"
 val awsIotBrowserBundleSource = project.projectDir.absolutePath + "/" + awsIotBrowserBundleDestination
-println(awsIotBrowserBundleDestination)
-println(awsIotBrowserBundleSource)
 
 val copyBrowserBundle by tasks.registering(Exec::class) {
     dependsOn += createDockerContainerForBrowserBundle
