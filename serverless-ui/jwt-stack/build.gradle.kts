@@ -167,8 +167,9 @@ configure<GwtPluginExtension> {
 }
 
 // Task configuration
-val awsIotBrowserBundleDestination = "./src/main/webapp/aws-iot-sdk-browser-bundle-min.js"
-val awsIotBrowserBundleSource = project.projectDir.absolutePath + "/" + awsIotBrowserBundleDestination
+val awsIotBrowserBundle = "aws-iot-sdk-browser-bundle-min.js"
+val awsIotBrowserBundleRelativeDestination = "./war/" + awsIotBrowserBundle
+val awsIotBrowserBundleAbsoluteDestination = project.projectDir.absolutePath + "/" + awsIotBrowserBundleRelativeDestination
 
 val copyBrowserBundle by tasks.registering(Exec::class) {
     dependsOn += createDockerContainerForBrowserBundle
@@ -177,18 +178,20 @@ val copyBrowserBundle by tasks.registering(Exec::class) {
         "docker",
         "cp",
         "aws-iot-device-sdk-js-container:/node_modules/aws-iot-device-sdk/browser/aws-iot-sdk-browser-bundle-min-uglifyjs.js",
-        awsIotBrowserBundleDestination
+        awsIotBrowserBundleRelativeDestination
     )
+}
+
+tasks.warTemplate {
+    if (!File(awsIotBrowserBundleAbsoluteDestination).exists()) {
+        // If we don't have the browser bundle we'll need to build and copy it before the war template task runs
+        dependsOn += copyBrowserBundle
+    }
 }
 
 tasks.war {
     // Make sure GWT code is compiled before the war is generated
     dependsOn += tasks.compileGwt
-
-    if (!File(awsIotBrowserBundleSource).exists()) {
-        // If we don't have the browser bundle we'll need to build and copy it
-        dependsOn += copyBrowserBundle
-    }
 
     // Make sure the fixed keys are generated before the WAR
     dependsOn += tasks.test
@@ -203,9 +206,11 @@ tasks.shadowJar {
     dependsOn += tasks.test
 
     // Get all of the GWT compiler output
+    inputs.files(fileTree("build/gwt/out"))
     from("build/gwt/out")
 
     // Get all of the static assets
+    inputs.files(fileTree("war"))
     from("war")
 
     // Exclude WEB-INF so we don't include a bunch of classes we don't need
