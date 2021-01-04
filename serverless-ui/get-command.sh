@@ -13,7 +13,7 @@ if [ -z "$JAR" ]; then
   exit 1
 fi
 
-command -v java &>/dev/null && command -v cdk &>/dev/null && ../require-java-version.sh 1.8
+command -v java &>/dev/null && command -v cdk &>/dev/null
 
 HAS_JAVA_AND_CDK=$?
 
