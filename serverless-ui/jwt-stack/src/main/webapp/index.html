@@ -7,6 +7,15 @@
 
     <script src="app/app.nocache.js"></script>
 
+    <script>
+        setTimeout(function() {
+          if (!document.getElementById("app")) {
+              // The GWT app failed to load in 4 seconds, reload the page
+              window.location.reload();
+          }
+        }, 4000)
+    </script>
+
     <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script>
 
     <script src="aws-iot-sdk-browser-bundle-min.js"></script>
@@ -39,10 +48,14 @@
         if (locationString != originalLocationString) {
             window.location.replace(locationString);
         }
+
+
     </script>
 
     <script>
         var AWSIoTData = require('aws-iot-device-sdk');
+
+
     </script>
 </head>
 
