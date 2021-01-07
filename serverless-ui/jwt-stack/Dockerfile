@@ -37,7 +37,7 @@ RUN curl -L https://raw.githubusercontent.com/tj/n/master/bin/n -o n
 RUN bash n lts
 
 # Install CDK
-RUN npm install -g aws-cdk@1.80.0
+RUN npm install -g aws-cdk@1.82.0
 
 COPY build.gradle.kts /serverless-ui/jwt-stack/
 COPY gradlew /serverless-ui/jwt-stack/
