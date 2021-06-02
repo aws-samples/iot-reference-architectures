@@ -57,8 +57,8 @@ dependencies {
     // For converting payloads to hex strings
     implementation("commons-codec:commons-codec:$commonsCodecVersion")
 
-    // For profiling Lambda functions
-//    implementation("com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor:$xrayVersion"
+    // For processing binary payloads
+    implementation("com.igormaznitsa:jbbp:2.0.3")
 
     implementation("org.slf4j:slf4j-log4j12:$slf4jVersion")
 

@@ -2,12 +2,17 @@ package com.awssamples.iot.dynamodb.api;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import io.vavr.Lazy;
 import io.vavr.Tuple2;
 import io.vavr.control.Try;
 import io.vavr.gson.VavrGson;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
+import software.amazon.awssdk.services.iot.IotClient;
+import software.amazon.awssdk.services.iot.model.DescribeEndpointRequest;
+import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
 
+import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap;
 import java.util.List;
@@ -33,6 +38,10 @@ public class SharedHelper {
     public static final String MESSAGE_ID_KEY = SharedHelper.getEnvironmentVariableOrThrow("messageIdKey", SharedHelper::missingMessageIdKeyException);
     public static final String INBOUND_SQS_QUEUE_ARN = SharedHelper.getEnvironmentVariableOrThrow("inboundSqsQueueArn", SharedHelper::missingInboundSqsQueueArnException);
     public static final String OUTBOUND_SQS_QUEUE_ARN = SharedHelper.getEnvironmentVariableOrThrow("outboundSqsQueueArn", SharedHelper::missingOutboundSqsQueueArnException);
+    public static final DescribeEndpointRequest DESCRIBE_ENDPOINT_REQUEST = DescribeEndpointRequest.builder().endpointType("iot:Data-ATS").build();
+    public static final Lazy<String> ENDPOINT_ADDRESS = Lazy.of(() -> IotClient.create().describeEndpoint(DESCRIBE_ENDPOINT_REQUEST).endpointAddress());
+    public static final Lazy<URI> ENDPOINT_URI = Lazy.of(() -> Try.of(() -> new URI(String.join("://", "https", ENDPOINT_ADDRESS.get()))).get());
+    public static final Lazy<IotDataPlaneClient> IOT_DATA_PLANE_CLIENT = Lazy.of(() -> IotDataPlaneClient.builder().endpointOverride(ENDPOINT_URI.get()).build());
 
     private static RuntimeException dynamoDbTableArnMissingException() {
         throw new RuntimeException("Missing the DynamoDB table ARN in the environment, can not continue");

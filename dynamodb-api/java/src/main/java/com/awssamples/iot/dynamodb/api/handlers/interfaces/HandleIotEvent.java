@@ -6,7 +6,6 @@ import com.awssamples.iot.dynamodb.api.SharedHelper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.vavr.collection.HashMap;
 import io.vavr.collection.List;
-import io.vavr.collection.Stream;
 import io.vavr.control.Option;
 import io.vavr.control.Try;
 import org.apache.commons.codec.binary.Hex;
@@ -18,7 +17,6 @@ import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.Condition;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryResponse;
-import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
 import software.amazon.awssdk.services.iotdataplane.model.PublishRequest;
 
 import java.nio.charset.Charset;
@@ -26,7 +24,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
-import static com.awssamples.iot.dynamodb.api.SharedHelper.getGson;
+import static com.awssamples.iot.dynamodb.api.SharedHelper.IOT_DATA_PLANE_CLIENT;
 
 /**
  * Base interface that shares code between the classes that handle IoT messages
@@ -106,9 +104,7 @@ public interface HandleIotEvent extends RequestHandler<Map, String> {
      */
     default String getRequestTopicTemplate() {
         String topicTemplate = getOperationType() + REQUEST_TOPIC_PREFIX;
-        getLogger().info("topic template: " + topicTemplate);
         String result = SharedHelper.getEnvironmentVariableOrThrow(topicTemplate, this::missingRequestTopicTemplateException);
-        LoggerFactory.getLogger(HandleIotEvent.class).info("topic template result: " + result);
         return result;
     }
 
@@ -190,8 +186,6 @@ public interface HandleIotEvent extends RequestHandler<Map, String> {
     default String handleRequest(final Map input, final Context context) {
         // Get the input topic so we can extract the UUID and message ID, if necessary
         String topic = getTopic(input);
-        getLogger().info("input: " + Try.of(() -> new ObjectMapper().writeValueAsString(input)).get());
-        getLogger().info("topic: " + Option.of(topic));
 
         // Split the input topic so we can find the UUID and message ID by index, if necessary
         String[] topicComponents = topic.split("/");
@@ -322,27 +316,20 @@ public interface HandleIotEvent extends RequestHandler<Map, String> {
         payloadMap = payloadMap.put("token", responseToken);
 
         // Build the topic from this implementation's response topic prefix and the user provided response token
-        getLogger().info("In publish response 1");
         List<String> dynamicArguments = List.of(
                 uuidOption,
                 recipientIdOption,
                 messageIdOption)
                 .flatMap(Option::toStream);
-        getLogger().info("In publish response 2");
 
         String topic = getResponseTopicTemplate();
-        getLogger().info("In publish response 3");
 
         if (!dynamicArguments.isEmpty()) {
-            getLogger().info("Dynamic arguments not empty [" + dynamicArguments + "]");
             // There are additional arguments, add them on
             String dynamicArgumentString = String.join("/", dynamicArguments);
 
             topic = String.join("/", topic, dynamicArgumentString);
-        } else {
-            getLogger().info("Dynamic arguments empty, topic [" + topic + "]");
         }
-        getLogger().info("In publish response 4");
 
         // Convert the payload map to JSON and then to an SdkBytes object
         SdkBytes payload = SdkBytes.fromString(SharedHelper.toJson(payloadMap), Charset.defaultCharset());
@@ -353,12 +340,8 @@ public interface HandleIotEvent extends RequestHandler<Map, String> {
                 .payload(payload)
                 .build();
 
-        getLogger().info("LOGGING PUBLISH REQUEST");
-        getLogger().info(getGson().toJson(publishRequest));
-        getLogger().info("LOGGED PUBLISH REQUEST");
-
         // Publish with the IoT data plane client
-        IotDataPlaneClient.create().publish(publishRequest);
+        IOT_DATA_PLANE_CLIENT.get().publish(publishRequest);
     }
 
     /**

@@ -7,10 +7,15 @@ from shared import argparse
 from shared import setup
 from shared import sleep
 
-try:
-    MESSAGE_LIMIT = int(os.getenv('MESSAGE_LIMIT'))
-except ValueError as ex:
-    MESSAGE_LIMIT = None
+MESSAGE_LIMIT = None
+
+MESSAGE_LIMIT_STRING = os.getenv('MESSAGE_LIMIT')
+
+if (MESSAGE_LIMIT_STRING is not None):
+    MESSAGE_LIMIT = int(MESSAGE_LIMIT_STRING)
+    print("MESSAGE_LIMIT environment variable specified, will stop after receiving " + str(MESSAGE_LIMIT) + " message(s)")
+else:
+    print("MESSAGE_LIMIT environment variable NOT specified, will run until interrupted")
 
 MESSAGE_COUNT = 0
 RUNNING = True
@@ -31,6 +36,7 @@ def disconnect_and_exit():
     global RUNNING
     global mqtt_client
 
+    print("MESSAGE_LIMIT reached, disconnecting client and exiting")
     RUNNING = False
     mqtt_client.disconnect()
     sys.exit(0)

@@ -34,9 +34,8 @@ public class HandleIotSendEvent implements HandleIotEvent {
 
         String sqsMessageId = putInSqs(recipientUuid, payload);
 
-        // Return a payload on the response topic that contains the UUID and confirmation that the message was put in SQS
+        // Return a payload on the response topic that contains the confirmation that the message was put in SQS
         HashMap<String, Object> payloadMap = HashMap.of(
-                SharedHelper.UUID_DYNAMO_DB_COLUMN_NAME, uuidOption,
                 "sqs_message_id", sqsMessageId);
 
         publishResponse(uuidOption, messageIdOption, recipientIdOption, responseToken, payloadMap);
@@ -65,17 +64,27 @@ public class HandleIotSendEvent implements HandleIotEvent {
 
         String encodedBody = getGson().toJson(body);
 
-        SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
+        SendMessageRequest.Builder sendMessageRequestBuilder = SendMessageRequest.builder()
                 .queueUrl(queueUrl)
-                .messageBody(encodedBody)
-                .messageGroupId("DEFAULT")
-                .messageDeduplicationId(UUID.randomUUID().toString())
-                .build();
+                .messageBody(encodedBody);
+
+        if (outboundQueueIsFifoQueue()) {
+            // FIFO queues need deduplication and group IDs
+            sendMessageRequestBuilder
+                    .messageDeduplicationId(UUID.randomUUID().toString())
+                    .messageGroupId(UUID.randomUUID().toString());
+        }
 
         // Send the message to the queue
-        SendMessageResponse sendMessageResponse = sqsClient.sendMessage(sendMessageRequest);
+        SendMessageResponse sendMessageResponse = sqsClient.sendMessage(sendMessageRequestBuilder.build());
 
         return sendMessageResponse.messageId();
+    }
+
+    private boolean outboundQueueIsFifoQueue() {
+        // From https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html
+        //   "The name of a FIFO queue must end with the .fifo suffix"
+        return SharedHelper.getOutboundQueueName().endsWith(".fifo");
     }
 
     @Override

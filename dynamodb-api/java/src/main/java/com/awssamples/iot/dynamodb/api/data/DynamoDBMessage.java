@@ -2,7 +2,7 @@ package com.awssamples.iot.dynamodb.api.data;
 
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 
-public class CookedMessage {
+public class DynamoDBMessage {
     /**
      * The value from SQS called "SentTimestamp"
      */
@@ -18,7 +18,7 @@ public class CookedMessage {
      */
     private final String sqsMessageId;
 
-    public CookedMessage(String sentTimestamp, AttributeValue body, String sqsMessageId) {
+    public DynamoDBMessage(String sentTimestamp, AttributeValue body, String sqsMessageId) {
         this.sentTimestamp = sentTimestamp;
         this.body = body;
         this.sqsMessageId = sqsMessageId;

@@ -35,8 +35,8 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
     public static final Logger log = LoggerFactory.getLogger(SqsToIotCoreStack.class);
     public static final String INBOUND_SQS_QUEUE_ARN_ENVIRONMENT_VARIABLE = "INBOUND_SQS_QUEUE_ARN";
     public static final String OUTBOUND_SQS_QUEUE_ARN_ENVIRONMENT_VARIABLE = "OUTBOUND_SQS_QUEUE_ARN";
-    public static final String UUID_KEY_ENVIRONMENT_VARIABLE = "UUID_KEY";
-    public static final String MESSAGE_ID_KEY_ENVIRONMENT_VARIABLE = "MESSAGE_ID_KEY";
+    public static final String UUID_NAME_ENVIRONMENT_VARIABLE = "UUID_NAME";
+    public static final String MESSAGE_ID_NAME_ENVIRONMENT_VARIABLE = "MESSAGE_ID_NAME";
     public static final String DYNAMO_DB_TABLE_ARN = "dynamoDbTableArn";
     public static final String INBOUND_SQS_QUEUE_ARN = "inboundSqsQueueArn";
     public static final String OUTBOUND_SQS_QUEUE_ARN = "outboundSqsQueueArn";
@@ -125,8 +125,8 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
     public static final String NOTIFICATION_RULE_NAME = String.join(NO_SEPARATOR, NOTIFICATION, MESSAGE_RULE);
     public static final String NOTIFICATION_LAMBDA_PERMISSIONS = String.join(NO_SEPARATOR, LAMBDA_INVOCATION_PERMISSIONS_PREFIX, NOTIFICATION);
 
-    public static final String DEFAULT_UUID_KEY = "thingName";
-    public static final String DEFAULT_MESSAGE_ID_KEY = "epochTime";
+    public static final String DEFAULT_UUID_VALUE = "thingName";
+    public static final String DEFAULT_MESSAGE_ID_VALUE = "epochTime";
     public static final String MULTI_LEVEL_MQTT_WILDCARD = "#";
     public static final String REQUEST_TOPIC_PREFIX_KEY = "RequestTopicPrefix";
     public static final String RESPONSE_TOPIC_PREFIX_KEY = "ResponseTopicPrefix";
@@ -226,7 +226,7 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
         allowIotTopicRuleToInvokeLambdaFunction(this, devicesRule, devicesLambda, DEVICES_LAMBDA_PERMISSIONS);
 
         // Resources to send messages to SQS
-        List<PolicyStatement> sendToSqsPolicyStatements = List.of(getSqsSendMessagePolicyStatement(outboundSqsQueueArn));
+        List<PolicyStatement> sendToSqsPolicyStatements = getSqsSendMessagePolicyStatements(outboundSqsQueueArn);
         Role sendRole = buildIotEventRoleForTopicPrefix(SEND_ROLE_NAME, SEND_RESPONSE_TOPIC_PREFIX, sendToSqsPolicyStatements, List.empty());
         String sendRequestTopicFilter = String.join(MQTT_TOPIC_SEPARATOR, SEND_REQUEST_TOPIC_PREFIX, MULTI_LEVEL_MQTT_WILDCARD);
         Map<String, String> sendMessageLambdaEnvironment = getSendMessageLambdaEnvironment(outboundSqsQueueArn);
@@ -247,14 +247,14 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
 
     @NotNull
     private String getDefaultUuidKeyAndWarn() {
-        log.warn("No UUID key specified, using " + DEFAULT_UUID_KEY + " as default value");
-        return DEFAULT_UUID_KEY;
+        log.warn("No UUID specified, using " + DEFAULT_UUID_VALUE + " as default value");
+        return DEFAULT_UUID_VALUE;
     }
 
     @NotNull
     private String getDefaultMessageKeyIdAndWarn() {
-        log.warn("No message ID key specified, using " + DEFAULT_MESSAGE_ID_KEY + " as default value");
-        return DEFAULT_MESSAGE_ID_KEY;
+        log.warn("No message ID specified, using " + DEFAULT_MESSAGE_ID_VALUE + " as default value");
+        return DEFAULT_MESSAGE_ID_VALUE;
     }
 
     private Option<String> getInboundQueueArn(Map<String, String> map) {
@@ -266,11 +266,11 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
     }
 
     private Option<String> getUuid(Map<String, String> map) {
-        return map.get(UUID_KEY_ENVIRONMENT_VARIABLE);
+        return map.get(UUID_NAME_ENVIRONMENT_VARIABLE);
     }
 
     private Option<String> getMessageId(Map<String, String> map) {
-        return map.get(MESSAGE_ID_KEY_ENVIRONMENT_VARIABLE);
+        return map.get(MESSAGE_ID_NAME_ENVIRONMENT_VARIABLE);
     }
 
     private Queue buildInboundMessageQueue() {
@@ -398,7 +398,8 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
                         List.of(sqsPolicyStatement,
                                 minimalCloudWatchEventsLoggingPolicy,
                                 dynamoDbPolicyStatement,
-                                iotPolicyStatement).asJava())
+                                iotPolicyStatement,
+                                DESCRIBE_ENDPOINT_POLICY_STATEMENT).asJava())
                 .build();
         PolicyDocument policyDocument = new PolicyDocument(policyDocumentProps);
 
@@ -412,26 +413,35 @@ public class SqsToIotCoreStack extends software.amazon.awscdk.core.Stack impleme
         return new Role(this, "MoveFromSqsToDynamoDbRole", moveFromSqsToDynamoDbRoleProps);
     }
 
-    private PolicyStatement getSqsSendMessagePolicyStatement(String queueArn) {
+    private List<PolicyStatement> getSqsSendMessagePolicyStatements(String queueArn) {
         PolicyStatementProps sqsPolicyStatementProps = PolicyStatementProps.builder()
                 .effect(Effect.ALLOW)
                 .resources(List.of(queueArn).asJava())
                 .actions(List.of("sqs:SendMessage", "sqs:GetQueueUrl").asJava())
                 .build();
 
-        return new PolicyStatement(sqsPolicyStatementProps);
+        return List.of(new PolicyStatement(sqsPolicyStatementProps),
+                DESCRIBE_ENDPOINT_POLICY_STATEMENT);
     }
 
     private Role buildIotEventRoleForTopic(String roleName, String topic, List<PolicyStatement> policyStatements, List<IManagedPolicy> managedPolicies) {
         PolicyStatement iotPolicyStatement = getPublishToTopicPolicyStatement(this, topic);
 
-        return buildRoleAssumedByLambda(this, roleName, List.ofAll(policyStatements).append(iotPolicyStatement), managedPolicies);
+        policyStatements = policyStatements
+                .append(iotPolicyStatement)
+                .append(DESCRIBE_ENDPOINT_POLICY_STATEMENT);
+
+        return buildRoleAssumedByLambda(this, roleName, policyStatements, managedPolicies);
     }
 
     private Role buildIotEventRoleForTopicPrefix(String roleName, String topicPrefix, List<PolicyStatement> policyStatements, List<IManagedPolicy> managedPolicies) {
         PolicyStatement iotPolicyStatement = getPublishToTopicPrefixPolicyStatement(this, topicPrefix);
 
-        return buildRoleAssumedByLambda(this, roleName, List.ofAll(policyStatements).append(iotPolicyStatement), managedPolicies);
+        policyStatements = policyStatements
+                .append(iotPolicyStatement)
+                .append(DESCRIBE_ENDPOINT_POLICY_STATEMENT);
+
+        return buildRoleAssumedByLambda(this, roleName, policyStatements, managedPolicies);
     }
 
     private PolicyStatement getGetItemPolicyStatementForTable(Table table) {

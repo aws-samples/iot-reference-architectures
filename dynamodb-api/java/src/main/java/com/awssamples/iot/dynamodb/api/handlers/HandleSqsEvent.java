@@ -3,7 +3,7 @@ package com.awssamples.iot.dynamodb.api.handlers;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.awssamples.iot.dynamodb.api.SharedHelper;
-import com.awssamples.iot.dynamodb.api.data.CookedMessage;
+import com.awssamples.iot.dynamodb.api.data.DynamoDBMessage;
 import com.awssamples.iot.dynamodb.api.data.UuidAndMessageId;
 import io.vavr.collection.HashMap;
 import io.vavr.control.Try;
@@ -13,7 +13,6 @@ import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
-import software.amazon.awssdk.services.iotdataplane.IotDataPlaneClient;
 import software.amazon.awssdk.services.iotdataplane.model.PublishRequest;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
@@ -29,7 +28,7 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
     private static final Logger log = LoggerFactory.getLogger(HandleSqsEvent.class);
     private static final String RECORDS = "Records";
     private static final String ONLY_ONE_RECORD_MAY_BE_PROCESSED_AT_A_TIME = "Only one record may be processed at a time";
-    private static final SdkBytes EMPTY_PAYLOAD = SdkBytes.fromByteArray("{}".getBytes());
+    private boolean customProcessingRequired = false;
 
     @Override
     public String handleRequest(final Map input, final Context context) {
@@ -57,11 +56,16 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
         // Convert the map to a DynamoDB attribute value so it can be stored
         AttributeValue body = SharedHelper.toDynamoDbAttributeValue(map);
 
-        // Create a "cooked message" that has all the fields we want to store
-        CookedMessage cookedMessage = new CookedMessage(sentTimestamp, body, sqsMessageId);
+        // Create a "DynamoDB message" that has all the fields we want to store
+        DynamoDBMessage dynamoDBMessage = new DynamoDBMessage(sentTimestamp, body, sqsMessageId);
 
-        // Store the cooked message in DynamoDB
-        UuidAndMessageId uuidAndMessageId = addCookedMessageToDynamoDb(cookedMessage);
+        if (customProcessingRequired) {
+            // If the custom processing fails the message will be returned unmodified
+            dynamoDBMessage = attemptCustomProcessing(dynamoDBMessage);
+        }
+
+        // Store the message in DynamoDB
+        UuidAndMessageId uuidAndMessageId = addMessageToDynamoDb(dynamoDBMessage);
 
         // Remove the message from SQS once it is stored in DynamoDB
         removeFromSqs(receiptHandle);
@@ -72,6 +76,11 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
         return "done";
     }
 
+    private DynamoDBMessage attemptCustomProcessing(DynamoDBMessage dynamoDBMessage) {
+        // No custom processing implemented at the moment
+        return dynamoDBMessage;
+    }
+
     private void publishNotification(UuidAndMessageId uuidAndMessageId) {
         PublishRequest publishRequest = PublishRequest.builder()
                 .topic(String.join("/", "notification", uuidAndMessageId.getUuid()))
@@ -79,7 +88,8 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
                 .payload(SdkBytes.fromByteArray(toJson(uuidAndMessageId).getBytes()))
                 .build();
 
-        IotDataPlaneClient.create().publish(publishRequest);
+        // Publish with the IoT data plane client
+        IOT_DATA_PLANE_CLIENT.get().publish(publishRequest);
     }
 
 
@@ -104,14 +114,13 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
         sqsClient.deleteMessage(deleteMessageRequest);
     }
 
-    private UuidAndMessageId addCookedMessageToDynamoDb(CookedMessage cookedMessage) {
-        Map<String, AttributeValue> body = cookedMessage.getBody().m();
-        log.info("Body: " + getGson().toJson(body));
+    private UuidAndMessageId addMessageToDynamoDb(DynamoDBMessage dynamoDBMessage) {
+        Map<String, AttributeValue> body = dynamoDBMessage.getBody().m();
 
         // The message ID in DynamoDB is the user specified message ID field, followed by the SQS sent timestamp, followed by the SQS message ID (UUID)
         AttributeValue messageId = Try.of(() -> getField(MESSAGE_ID_KEY, body))
                 // Add some additional data to make sure it is unique
-                .map(value -> String.join("-", value, cookedMessage.getSentTimestamp(), cookedMessage.getSqsMessageId()))
+                .map(value -> String.join("-", value, dynamoDBMessage.getSentTimestamp(), dynamoDBMessage.getSqsMessageId()))
                 // If the string starts with "null-" remove it
                 .map(value -> value.replaceFirst("null-", ""))
                 // Turn it into an attribute value
@@ -128,7 +137,7 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
         HashMap<String, AttributeValue> item = HashMap.of(
                 UUID_DYNAMO_DB_COLUMN_NAME, uuid,
                 MESSAGE_ID_DYNAMO_DB_COLUMN_NAME, messageId,
-                BODY, cookedMessage.getBody());
+                BODY, dynamoDBMessage.getBody());
 
         PutItemRequest putItemRequest = PutItemRequest.builder()
                 .item(item.toJavaMap())
@@ -149,13 +158,10 @@ public class HandleSqsEvent implements RequestHandler<Map, String> {
         }
 
         Map<String, AttributeValue> currentMap = body;
-        log.info("currentMap: " + getGson().toJson(currentMap));
 
         // Nested field. Loop through them until the last one.
         for (int loop = 0; loop < fields.length - 1; loop++) {
-            log.info("loop, fields[loop]: " + loop + ", " + fields[loop]);
             currentMap = currentMap.get(fields[loop]).m();
-            log.info("currentMap: " + getGson().toJson(currentMap));
         }
 
         // Last field, extract the string
