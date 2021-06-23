@@ -38,7 +38,7 @@ val awsLambdaJavaCoreVersion = "1.2.1"
 val vavrVersion = "0.10.3"
 val vavrGsonVersion = "0.10.2"
 val commonsCodecVersion = "1.15"
-val resultsIteratorForAwsJavaSdkVersion = "29.0.7"
+val resultsIteratorForAwsJavaSdkVersion = "29.0.9"
 val xrayVersion = "2.7.1"
 
 group = "com.awssamples.iot.dynamodb.Api"
