@@ -46,7 +46,7 @@ tasks.shadowJar {
 // Specify all of our dependency versions
 val slf4jVersion = "1.7.30"
 val gsonVersion = "2.8.7"
-val cborVersion = "4.4.3"
+val cborVersion = "4.4.4"
 val awsSdk2Version = "2.16.85"
 val junitVersion = "4.13.2"
 val awsLambdaJavaCoreVersion = "1.2.1"
