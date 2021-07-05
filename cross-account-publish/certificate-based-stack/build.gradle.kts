@@ -25,7 +25,7 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(8))
 // Required for shadow JAR but we don't use it. Can not be replaced with application.mainClass.set.
 application.mainClassName = "not-necessary"
 
-val gradleDependencyVersion = "7.1"
+val gradleDependencyVersion = "7.1.1"
 
 tasks.wrapper {
     gradleVersion = gradleDependencyVersion
